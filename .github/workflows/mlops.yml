@@ -98,13 +98,23 @@ jobs:
         #         Ten bucket lay tu secret CLOUD_BUCKET.
         run: |
           python - <<'EOF'
+          import os
           from google.cloud import storage
 
-          storage_client = storage.Client()
-          bucket = storage_client.get_bucket("${{ secrets.CLOUD_BUCKET }}")
-          blob = bucket.blob('models/latest/model.pkl')
-          blob.upload_from_filename('models/model.pkl')
-          print(f"File 'models/model.pkl' uploaded.")
+          # Explicitly point to the credential file
+          os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/sa-key.json"
+          
+          try:
+              storage_client = storage.Client()
+              bucket_name = "${{ secrets.CLOUD_BUCKET }}".replace("gs://", "")
+              bucket = storage_client.get_bucket(bucket_name)
+              blob = bucket.blob('models/latest/model.pkl')
+              
+              blob.upload_from_filename('models/model.pkl')
+              print("File models/model.pkl uploaded successfully.")
+          except Exception as e:
+              print(f"Upload failed: {e}")
+              exit(1)
           EOF
 
       - name: Save metrics as artifact
