@@ -99,7 +99,7 @@ jobs:
           from google.cloud import storage
 
           storage_client = storage.Client()
-          bucket = storage_client.get_bucket("${{ CLOUD_BUCKET }}")
+          bucket = storage_client.get_bucket("${{ secrets.CLOUD_BUCKET }}")
           blob = bucket.blob('models/latest/model.pkl')
           blob.upload_from_filename('models/model.pkl')
           print(f"File {path_to_file} uploaded.")
