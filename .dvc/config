@@ -1,0 +1,5 @@
+[core]
+    remote = myremote
+['remote "myremote"']
+    url = gs://gen-lang-client-0930334575/dvc
+    credentialpath = ../sa-key.json
