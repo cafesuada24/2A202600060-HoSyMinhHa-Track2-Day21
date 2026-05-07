@@ -68,12 +68,15 @@ jobs:
           echo '${{ secrets.CLOUD_CREDENTIALS }}' > /tmp/sa-key.json
           echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa-key.json" >> $GITHUB_ENV
 
+      - id: 'auth'
+        name: Authenticate to Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.CLOUD_CREDENTIALS }}'
 
       - name: Pull data with DVC
-        # TODO 3: Pull cac file du lieu can thiet tu cloud storage bang lenh dvc pull.
-        #         Chi pull train_phase1.csv va eval.csv (khong can train_phase2.csv).
         run: |
-          dvc remote modify --local myremote credentialpath /tmp/sa-key.json
+          dvc remote modify --local myremote credentialpath "$GOOGLE_APPLICATION_CREDENTIALS"
           dvc pull data/train_phase1.csv.dvc data/eval.csv.dvc
 
       - name: Train model
@@ -93,27 +96,22 @@ jobs:
           
 
       - name: Upload model to Cloud Storage
-        # TODO 5: Su dung cloud SDK de upload models/model.pkl len
-        #         <bucket>/models/latest/model.pkl.
-        #         Ten bucket lay tu secret CLOUD_BUCKET.
         run: |
           python - <<'EOF'
           import os
           from google.cloud import storage
 
-          # Explicitly point to the credential file
-          os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/sa-key.json"
+          storage_client = storage.Client()
           
-          try:
-              storage_client = storage.Client()
-              bucket_name = "${{ secrets.CLOUD_BUCKET }}".replace("gs://", "")
-              bucket = storage_client.get_bucket(bucket_name)
-              blob = bucket.blob('models/latest/model.pkl')
-              
+          bucket_name = "${{ secrets.CLOUD_BUCKET }}".replace("gs://", "")
+          bucket = storage_client.get_bucket(bucket_name)
+          blob = bucket.blob('models/latest/model.pkl')
+          
+          if os.path.exists('models/model.pkl'):
               blob.upload_from_filename('models/model.pkl')
-              print("File models/model.pkl uploaded successfully.")
-          except Exception as e:
-              print(f"Upload failed: {e}")
+              print(f"Successfully uploaded model to {bucket_name}")
+          else:
+              print("Error: models/model.pkl not found!")
               exit(1)
           EOF
 
