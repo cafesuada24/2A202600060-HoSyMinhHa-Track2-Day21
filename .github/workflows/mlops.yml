@@ -82,6 +82,10 @@ jobs:
           dvc pull data/train_phase1.csv.dvc data/eval.csv.dvc
 
       - name: Train model
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
         run: python src/train.py
 
       - name: Read metrics
@@ -97,31 +101,56 @@ jobs:
             echo "accuracy=$ACC" >> $GITHUB_OUTPUT
           
 
-      - name: Upload model to Cloud Storage
+      - name: Upload model to Cloud Storage (with safety gate)
         run: |
           python - <<'EOF'
           import os
+          import json
           from google.cloud import storage
 
           storage_client = storage.Client()
-          
           bucket_name = "${{ secrets.CLOUD_BUCKET }}".replace("gs://", "")
           bucket = storage_client.bucket(bucket_name)
-          blob = bucket.blob('models/latest/model.pkl')
           
+          # Bonus 4: Hoan tra ve phien ban truoc (Safety Gate)
+          # Tai metrics cua lan chay truoc tu cloud storage de so sanh
+          metrics_blob = bucket.blob('models/latest/metrics.json')
+          new_metrics = json.load(open('outputs/metrics.json'))
+          new_acc = new_metrics['accuracy']
+          
+          if metrics_blob.exists():
+              try:
+                  old_metrics = json.loads(metrics_blob.download_as_string())
+                  old_acc = old_metrics.get('accuracy', 0)
+                  print(f"Comparing accuracies: Old={old_acc:.4f}, New={new_acc:.4f}")
+                  if new_acc < old_acc:
+                      print(f"!!! Error: New accuracy {new_acc:.4f} is lower than current {old_acc:.4f}.")
+                      print("Aborting deployment to maintain model quality.")
+                      exit(1)
+                  print("Performance check passed.")
+              except Exception as e:
+                  print(f"Warning: Could not parse old metrics: {e}. Proceeding anyway.")
+          else:
+              print("No previous metrics found. First deployment.")
+
+          # Upload model va metrics moi
+          model_blob = bucket.blob('models/latest/model.pkl')
           if os.path.exists('models/model.pkl'):
-              blob.upload_from_filename('models/model.pkl')
-              print(f"Successfully uploaded model to {bucket_name}")
+              model_blob.upload_from_filename('models/model.pkl')
+              metrics_blob.upload_from_filename('outputs/metrics.json')
+              print(f"Successfully uploaded new model and metrics to {bucket_name}")
           else:
               print("Error: models/model.pkl not found!")
               exit(1)
           EOF
 
-      - name: Save metrics as artifact
+      - name: Save reports and metrics as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: metrics
-          path: outputs/metrics.json
+          name: performance-report
+          path: |
+            outputs/metrics.json
+            outputs/report.txt
 
 
   # ---------------------------------------------------------------------------
