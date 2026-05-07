@@ -8,7 +8,7 @@ app = FastAPI()
 
 GCS_BUCKET = os.environ["GCS_BUCKET"]
 GCS_MODEL_KEY = "models/latest/model.pkl"
-MODEL_PATH = os.path.expanduser("~/models/model.pkl")
+MODEL_PATH = os.path.expanduser("models/model.pkl")
 
 
 def download_model():
@@ -73,7 +73,7 @@ def predict(req: PredictRequest):
 
     pred = model.predict([req.features])
 
-    return {"prediction": pred[0], "label": PRED_MAP[pred[0]]}
+    return {"prediction": pred.item(), "label": PRED_MAP[pred.item()]}
 
 
 if __name__ == "__main__":
