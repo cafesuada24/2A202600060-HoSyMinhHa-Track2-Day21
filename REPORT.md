@@ -34,4 +34,14 @@ Qua quá trình so sánh trên MLflow UI, bộ tham số này mang lại độ c
 
 ---
 
+## 4. Kết Quả Thử Thách Nâng Cao (Bonus)
+Đã hoàn thành toàn bộ 5 thử thách (20 điểm bonus):
+- **Bonus 1 (DagsHub):** Kết nối thành công MLflow tracking từ xa. Toàn bộ thí nghiệm từ GitHub Actions được ghi nhận trực tuyến trên DagsHub.
+- **Bonus 2 (Đa thuật toán):** Hỗ trợ `Random Forest`, `Gradient Boosting` và `Logistic Regression`, cấu hình linh hoạt qua `params.yaml`.
+- **Bonus 3 (Báo cáo tự động):** Tự động tạo `report.txt` (Confusion Matrix & Classification Report), lưu trữ làm GitHub Artifact.
+- **Bonus 4 (Safety Gate):** Tự động so sánh Accuracy với model cũ trên Cloud Storage; chặn deploy nếu hiệu suất sụt giảm (Regression testing).
+- **Bonus 5 (Data Drift Warning):** Kiểm tra và cảnh báo lệch lạc phân phối nhãn (Label Distribution) trong log và lưu vào metrics.
+
+---
+
 *Hết báo cáo.*
